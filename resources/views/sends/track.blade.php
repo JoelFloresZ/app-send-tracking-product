@@ -1,41 +1,18 @@
 @extends('layouts.app')
 
+@section('title')
+    Seguímiento
+@endsection
+
 @section('content')
 <div class="container">
    {{--  track --}}
-   <div class="row justify-content-center" id="search-form">
-       <div class="col-md-6">
-            <h3>Rastreo del producto: <strong>Celular S35</strong></h3>
-            <p>
-                <small>Origen: Zongolica - Destino: Cordoba</small>
-            </p>
-            <hr>
+   <div class="w-75 mx-auto" id="search-form">
+    <x-track-send :trackingSend="$tracking" :product="$product"></x-track-send>
+   </div>
 
-            <div>
-                <ul>
-                    <li>Salio el producto
-                        <ul>
-                            <li>Salio: 11:30 pm - Zongolica</li>
-                        </ul>
-                        <hr>
-                    </li>
-
-                    <li>Llego el producto a la taquilla Tequila
-                        <ul>
-                            <li>llego: 12:30 pm - Tequila</li>
-                        </ul>
-                        <hr>
-                    </li>
-
-                    <li>Nuevamente el producto esta encamino
-                        <ul>
-                            <li> salio: 12:30 pm - Tequila</li>
-                        </ul>
-                        <hr>
-                    </li>
-                </ul>
-            </div>
-       </div>
+   <div class="text-center mt-3">
+       <a href="{{ route('show-form-commnet',$id) }}" class="btn btn-success rounded-pill">Comentar del servicio o producto</a>
    </div>
    {{-- end track --}}
 

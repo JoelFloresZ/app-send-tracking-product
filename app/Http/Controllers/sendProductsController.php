@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\send as Send;
 use App\tracking as Tracking;
 
@@ -16,7 +17,8 @@ class sendProductsController extends Controller
      */
     public function index()
     {
-
+        $sends = Send::paginate(35);
+        return view('all-products', compact('sends'));
     }
 
     /**
@@ -51,29 +53,62 @@ class sendProductsController extends Controller
             'product_output' => ['required', 'min:4'],
             'arrival_product' => ['required', 'min:4'],
             'price' => ['required'],
+            'comment' => ['required', 'min:15'],
         ]);
 
-        $sendEdit = new Send();
+        $send = new Send();
 
-        $sendEdit->folio = $request->folio;
-        $sendEdit->product = $request->product;
-        $sendEdit->client = $request->client;
-        $sendEdit->provider = $request->provider;
-        $sendEdit->date_send = $request->date_send;
-        $sendEdit->hour_send = $request->hour_send;
-        $sendEdit->date_arrival = $request->date_arrival;
-        $sendEdit->product_output = $request->product_output;
-        $sendEdit->arrival_product = $request->arrival_product;
-        $sendEdit->price = $request->price;
+        $send->folio = strtoupper($request->folio);
+        $send->product = ucfirst($request->product);
+        $send->client = ucwords($request->client);
+        $send->provider = ucwords($request->provider);
+        $send->date_send = $request->date_send;
+        $send->hour_send = $request->hour_send;
+        $send->date_arrival = $request->date_arrival;
+        $send->departure_location = ucfirst($request->product_output);
+        $send->arrival_location = ucfirst($request->arrival_product);
+        $send->price = $this->floatValue($request->price);
 
-        $sendEdit->user_id = Auth::id();
+        $send->user_id = Auth::id();
 
-        if ($sendEdit->save()) {
-            return back()->with('success', 'Envio registrado exitosamente!');;
+        if ($send->save()) {
+
+            $track = new Tracking;
+
+            $track->body = $request->comment;
+            $track->user_id = Auth::id();
+            $track->send_id = $send->id;
+
+            $track->save();
+
+            return back()->with('success', 'Envio registrado exitosamente!');
+
         } else {
-            return back()->with('error', 'Fallo al dar de alta el envío!');;
+            return back()->with('error', 'Fallo al dar de alta el envío!');
         }
 
+    }
+
+    /*
+    *   Function que transforma la informacion del precio
+    */
+    public function floatValue($str){
+        if(preg_match("/([0-9\.,-]+)/", $str, $match)){
+            $value = $match[0];
+            if( preg_match("/(\.\d{1,2})$/", $value, $dot_delim) ){
+                $value = (float)str_replace(',', '', $value);
+            }
+            else if( preg_match("/(,\d{1,2})$/", $value, $comma_delim) ){
+                $value = str_replace('.', '', $value);
+                $value = (float)str_replace(',', '.', $value);
+            }
+            else
+                $value = (int)$value;
+        }
+        else {
+            $value = 0;
+        }
+        return $value;
     }
 
     /**
@@ -84,7 +119,10 @@ class sendProductsController extends Controller
      */
     public function show($id)
     {
-        $detailSend = Send::find($id);
+        $detailSend = Send::find(decrypt($id));
+
+        if(!is_object($detailSend)){abort(404);}
+
         return view('product.show', compact('detailSend'));
     }
 
@@ -96,7 +134,8 @@ class sendProductsController extends Controller
      */
     public function edit($id)
     {
-        $send = Send::find($id);
+        $send = Send::find(decrypt($id));
+        if(!is_object($send)){abort(404);}
         return view('product.edit', compact('send'));
     }
 
@@ -124,15 +163,16 @@ class sendProductsController extends Controller
 
         $sendEdit = Send::find($id);
 
+        if(!is_object($sendEdit)){abort(404);}
         //$sendEdit->folio = $request->folio;
-        $sendEdit->product = $request->product;
-        $sendEdit->client = $request->client;
-        $sendEdit->provider = $request->provider;
+        $sendEdit->product = ucfirst($request->product);
+        $sendEdit->client = ucwords($request->client);
+        $sendEdit->provider = ucwords($request->provider);
         $sendEdit->date_send = $request->date_send;
         $sendEdit->hour_send = $request->hour_send;
         $sendEdit->date_arrival = $request->date_arrival;
-        $sendEdit->product_output = $request->product_output;
-        $sendEdit->arrival_product = $request->arrival_product;
+        $sendEdit->departure_location = ucfirst($request->product_output);
+        $sendEdit->arrival_location = ucfirst($request->arrival_product);
         $sendEdit->price = $request->price;
 
         if ($sendEdit->save()) {
@@ -152,31 +192,55 @@ class sendProductsController extends Controller
      */
     public function destroy($id)
     {
-        $flight = Send::find($id);
+        $send = Send::find(decrypt($id));
 
-       if ( $flight->delete()) {
+        if(!is_object($send)){abort(404);}
+
+       if ( $send->delete()) {
          return redirect()->route('home');
        } else {
-        return back()->with('error', 'Fallo al eliminar el envío!');;
+        return back()->with('error', 'Fallo al eliminar el envío!');
        }
     }
 
-    public function showTrack()
+    public function showTrack($id)
     {
-       return view('sends.track');
+        $tracking = Tracking::where('send_id', decrypt($id))->get();
+
+        if (count($tracking) < 1) { abort(404); }
+
+        $product = DB::table('sends')->select('product', 'departure_location', 'arrival_location')
+                                    ->where('id', decrypt($id))->get();
+
+       return view('sends.track', compact('tracking','id', 'product'));
     }
 
     public function postStatusSend($id)
     {
-        $tracking = Tracking::where('send_id', $id)->get();
-        return view('sends.comment-status-send', compact('tracking','id'));
+        $tracking = Tracking::where('send_id', decrypt($id))->get();
+
+        if(count($tracking) < 1){abort(404);}
+
+        $product = DB::table('sends')->select('product', 'departure_location', 'arrival_location')
+                                    ->where('id', decrypt($id))->get();
+
+        return view('sends.comment-status-send', compact('tracking','id', 'product'));
     }
 
     public function searchFolio(Request $request)
     {
+        $validatedData = $request->validate([
+            'folio' => ['required'],
+        ]);
 
-        $send = Send::where('folio', $request->folio)->get();
 
-        return $send;
+        $sends = Send::where('folio', $request->folio)->get();
+
+        if(count($sends) < 1){
+            return redirect()->route('404');
+        }
+
+
+        return view('sends.result-search-folio', compact('sends'));
     }
 }

@@ -1,5 +1,9 @@
 @extends('layouts.app')
 
+@section('title')
+    Nuevo envío
+@endsection
+
 @section('content')
 <div class="container">
     <div class="row justify-content-center">
@@ -7,17 +11,9 @@
             <h4>Registrar nuevo envío</h4>
             <hr>
             {{-- Message of status send --}}
-            @if (session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if (session('error'))
-                <div class="alert alert-danger">
-                    {{ session('error') }}
-                </div>
-            @endif
+            <div>
+                <x-alert-message></x-alert-message>
+            </div>
 
             {{-- end status send --}}
             <form action="{{ route('save') }}" method="post">
@@ -39,12 +35,12 @@
 
                 <div class="form-group">
                     <label for="client">Cliente:</label>
-                    <input type="text" name="client" id="client" class="form-control" value="{{ old('client') }}" placeholder="Cliente..." required>
+                    <input type="text" name="client" id="client" class="form-control" value="{{ old('client') }}" placeholder="Nombre completo..." required>
                 </div>
 
                 <div class="form-group">
                     <label for="provider">Vendedor:</label>
-                    <input type="text" name="provider" id="provider" class="form-control" value="{{ old('provider') }}"  placeholder="Vendedor..." required>
+                    <input type="text" name="provider" id="provider" class="form-control" value="{{ old('provider') }}"  placeholder="Nombre completo..." required>
                 </div>
 
                 {{-- Group input of type date --}}
@@ -88,7 +84,16 @@
 
                 <div class="form-group">
                     <label for="price">Costo de envío:</label>
-                    <input type="text" name="price" id="price" class="form-control" value="{{ old('price') }}" placeholder="Precio..." required>
+                    <input type="text" pattern="[0-9.]+"  name="price" id="price" class="form-control" value="{{ old('price') }}" placeholder="Precio..." required>
+                </div>
+
+                <div class="form-group">
+                    <hr>
+                    <label for="comment">Seguimiento del envío:</label>
+                    <textarea name="comment" id="" cols="1" rows="2" class="form-control @error('comment') is-invalid @enderror" value="{{ old('comment') }}" placeholder="Ingrese el estado del envío"></textarea>
+                    @error('comment')
+                    <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
                 </div>
 
                 <div class="form-group mt-3 float-right">

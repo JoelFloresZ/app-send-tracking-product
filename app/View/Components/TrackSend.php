@@ -6,14 +6,17 @@ use Illuminate\View\Component;
 
 class TrackSend extends Component
 {
+    public $trackingSend;
+    public $product;
     /**
      * Create a new component instance.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct($trackingSend, $product)
     {
-        //
+        $this->trackingSend = $trackingSend;
+        $this->product = $product;
     }
 
     /**
